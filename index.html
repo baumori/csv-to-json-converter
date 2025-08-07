@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to Investor JSON Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        .input-tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            color: #6b7280;
+        }
+
+        .tab-button.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .file-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            border-color: #4f46e5;
+            background-color: #f8fafc;
+        }
+
+        .file-upload.dragover {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: #374151;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .textarea-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .textarea-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .convert-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .convert-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        .convert-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .stat-item {
+            background: #f3f4f6;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+        }
+
+        .json-output {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .copy-button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background: #059669;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #dc2626;
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #16a34a;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .content {
+                padding: 1.5rem;
+            }
+
+            .result-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .stats {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CSV to Investor JSON Converter</h1>
+            <p>Convert your investor CSV data to structured JSON format</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <div class="input-tabs">
+                    <button class="tab-button active" onclick="switchTab('upload')">Upload File</button>
+                    <button class="tab-button" onclick="switchTab('paste')">Paste Data</button>
+                </div>
+
+                <div id="upload-tab" class="tab-content active">
+                    <div class="file-upload" onclick="document.getElementById('csvFile').click()">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Click to upload CSV file</div>
+                        <div class="upload-subtext">or drag and drop your file here</div>
+                        <input type="file" id="csvFile" class="file-input" accept=".csv" onchange="handleFileUpload(event)">
+                    </div>
+                </div>
+
+                <div id="paste-tab" class="tab-content">
+                    <textarea 
+                        id="csvData" 
+                        class="textarea-input" 
+                        placeholder="Paste your CSV data here...&#10;Example:&#10;#,Investor name,Series,Shares #,Investment Amount&#10;1,&quot;Company ABC&quot;,Series B,10000,&quot;$100,000.00&quot;&#10;,,Series B1,5000,&quot;$50,000.00&quot;"></textarea>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button class="convert-button" onclick="convertToJSON()">Convert to JSON</button>
+                </div>
+            </div>
+
+            <div id="result-section" class="result-section" style="display: none;">
+                <div class="result-header">
+                    <h3 class="result-title">Conversion Result</h3>
+                    <div class="stats">
+                        <div class="stat-item">Investors: <span id="investor-count">0</span></div>
+                        <div class="stat-item">Transactions: <span id="transaction-count">0</span></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <button class="copy-button" onclick="copyToClipboard()">Copy JSON</button>
+                </div>
+                <pre id="json-output" class="json-output"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJsonResult = '';
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            // Clear any previous messages
+            clearMessages();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'text/csv') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const csvData = e.target.result;
+                    processCSVData(csvData);
+                };
+                reader.readAsText(file);
+            } else {
+                showError('Please select a valid CSV file.');
+            }
+        }
+
+        function convertToJSON() {
+            clearMessages();
+            
+            const activeTab = document.querySelector('.tab-content.active').id;
+            let csvData = '';
+
+            if (activeTab === 'upload-tab') {
+                const fileInput = document.getElementById('csvFile');
+                if (!fileInput.files.length) {
+                    showError('Please select a CSV file to convert.');
+                    return;
+                }
+                // File will be processed in handleFileUpload
+                return;
+            } else {
+                csvData = document.getElementById('csvData').value.trim();
+                if (!csvData) {
+                    showError('Please paste CSV data to convert.');
+                    return;
+                }
+            }
+
+            processCSVData(csvData);
+        }
+
+        function processCSVData(csvData) {
+            try {
+                // Parse CSV data
+                const parsedData = Papa.parse(csvData, {
+                    header: true,
+                    dynamicTyping: false,
+                    skipEmptyLines: true,
+                    delimitersToGuess: [',', '\t', '|', ';']
+                });
+
+                if (parsedData.errors.length > 0) {
+                    showError('CSV parsing errors: ' + parsedData.errors.map(e => e.message).join(', '));
+                    return;
+                }
+
+                // Convert to JSON structure
+                const result = convertParsedDataToJSON(parsedData.data);
+                
+                // Display result
+                displayResult(result);
+                showSuccess('CSV successfully converted to JSON!');
+
+            } catch (error) {
+                showError('Error processing CSV: ' + error.message);
+            }
+        }
+
+        function convertParsedDataToJSON(data) {
+            // Helper functions
+            function parseAmount(amountStr) {
+                if (!amountStr || typeof amountStr !== 'string') return 0;
+                return parseFloat(amountStr.replace(/[\$,\s]/g, ''));
+            }
+
+            function parseShares(sharesStr) {
+                if (!sharesStr) return 0;
+                if (typeof sharesStr === 'number') return sharesStr;
+                return parseInt(sharesStr.toString().replace(/,/g, ''));
+            }
+
+            // Process the data
+            const investors = [];
+            let currentInvestor = null;
+
+            data.forEach(row => {
+                // Check for new investor (has investor number and name)
+                if (row['#'] && row['Investor name']) {
+                    currentInvestor = {
+                        "Investor Name": row['Investor name'].trim(),
+                        "Transactions": []
+                    };
+                    investors.push(currentInvestor);
+                }
+
+                // Add transaction if we have current investor and transaction data
+                if (currentInvestor && row['Series'] && row['Shares #'] && row['Investment Amount']) {
+                    const investmentAmount = parseAmount(row['Investment Amount']);
+                    const numberOfShares = parseShares(row['Shares #']);
+                    const pricePerShare = numberOfShares > 0 ? investmentAmount / numberOfShares : 0;
+
+                    const transaction = {
+                        "Class of Shares Issued": row['Series'].trim(),
+                        "Number of Shares Purchased": numberOfShares,
+                        "Investment Amount": investmentAmount,
+                        "Currency": "USD",
+                        "Price Per Share": Math.round(pricePerShare * 10000) / 10000
+                    };
+
+                    currentInvestor.Transactions.push(transaction);
+                }
+            });
+
+            return {
+                "Investors": investors
+            };
+        }
+
+        function displayResult(result) {
+            currentJsonResult = JSON.stringify(result, null, 2);
+            
+            // Update stats
+            const investorCount = result.Investors.length;
+            const transactionCount = result.Investors.reduce((sum, inv) => sum + inv.Transactions.length, 0);
+            
+            document.getElementById('investor-count').textContent = investorCount;
+            document.getElementById('transaction-count').textContent = transactionCount;
+            
+            // Display JSON
+            document.getElementById('json-output').textContent = currentJsonResult;
+            
+            // Show result section
+            document.getElementById('result-section').style.display = 'block';
+            
+            // Scroll to result
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyToClipboard() {
+            if (currentJsonResult) {
+                navigator.clipboard.writeText(currentJsonResult).then(() => {
+                    const copyBtn = document.querySelector('.copy-button');
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied!';
+                    copyBtn.style.background = '#059669';
+                    
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                        copyBtn.style.background = '#10b981';
+                    }, 2000);
+                }).catch(err => {
+                    showError('Failed to copy to clipboard: ' + err.message);
+                });
+            }
+        }
+
+        function showError(message) {
+            clearMessages();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.querySelector('.input-section').insertBefore(errorDiv, document.querySelector('.input-section').lastElementChild);
+        }
+
+        function showSuccess(message) {
+            clearMessages();
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.querySelector('.input-section').insertBefore(successDiv, document.querySelector('.input-section').lastElementChild);
+        }
+
+        function clearMessages() {
+            const messages = document.querySelectorAll('.error-message, .success-message');
+            messages.forEach(msg => msg.remove());
+        }
+
+        // Drag and drop functionality
+        const fileUpload = document.querySelector('.file-upload');
+        
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'text/csv') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processCSVData(e.target.result);
+                };
+                reader.readAsText(files[0]);
+            } else {
+                showError('Please drop a valid CSV file.');
+            }
+        });
+    </script>
+</body>
+</html>
