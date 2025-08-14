@@ -304,7 +304,7 @@
                     <textarea 
                         id="csvData" 
                         class="textarea-input" 
-                        placeholder="Paste your CSV data here...&#10;Example:&#10;#,Investor name,Series,Shares #,Investment Amount&#10;1,&quot;Company ABC&quot;,Series B,10000,&quot;$100,000.00&quot;&#10;,,Series B1,5000,&quot;$50,000.00&quot;"></textarea>
+                        placeholder="Paste your CSV data here...&#10;Example:&#10;#,Investor name,Is Lead Investor,Series,Shares #,Investment Amount,Closing&#10;1,&quot;Company ABC&quot;,false,Series B,10000,&quot;$100,000.00&quot;,&quot;First Closing&quot;&#10;,,false,Series B1,5000,&quot;$50,000.00&quot;,&quot;Second Closing&quot;"></textarea>
                 </div>
 
                 <div style="margin-top: 1rem;">
@@ -423,6 +423,12 @@
                 return parseInt(sharesStr.toString().replace(/,/g, ''));
             }
 
+            function parseBoolean(boolStr) {
+                if (!boolStr) return false;
+                const str = boolStr.toString().toLowerCase().trim();
+                return str === 'true' || str === 'yes' || str === '1';
+            }
+
             // Process the data
             const investors = [];
             let currentInvestor = null;
@@ -430,8 +436,11 @@
             data.forEach(row => {
                 // Check for new investor (has investor number and name)
                 if (row['#'] && row['Investor name']) {
+                    const isLeadInvestor = parseBoolean(row['Is Lead Investor'] || row['Lead Investor'] || row['Lead']);
+                    
                     currentInvestor = {
                         "Investor Name": row['Investor name'].trim(),
+                        "Is Lead Investor": isLeadInvestor,
                         "Transactions": []
                     };
                     investors.push(currentInvestor);
@@ -442,13 +451,15 @@
                     const investmentAmount = parseAmount(row['Investment Amount']);
                     const numberOfShares = parseShares(row['Shares #']);
                     const pricePerShare = numberOfShares > 0 ? investmentAmount / numberOfShares : 0;
+                    const closing = row['Closing'] ? row['Closing'].trim() : "First Closing";
 
                     const transaction = {
                         "Class of Shares Issued": row['Series'].trim(),
                         "Number of Shares Purchased": numberOfShares,
                         "Investment Amount": investmentAmount,
                         "Currency": "USD",
-                        "Price Per Share": Math.round(pricePerShare * 10000) / 10000
+                        "Price Per Share": Math.round(pricePerShare * 10000) / 10000,
+                        "Closing": closing
                     };
 
                     currentInvestor.Transactions.push(transaction);
